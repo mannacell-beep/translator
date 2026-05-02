@@ -113,11 +113,6 @@ def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000")
 
 if __name__ == '__main__':
-    # 테스트 및 디버깅 중에는 무한 탭 생성을 막기 위해 브라우저 자동 오픈을 잠시 끕니다.
-    # Timer(1.5, open_browser).start() 
-    
-    print("🌐 서버가 시작되었습니다. 브라우저에서 http://127.0.0.1:5000 으로 접속하세요.")
-    
-    # [적용 1] threaded=True 추가: 웹소켓과 Flask 서버의 병렬 처리를 안정적으로 만듭니다.
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
-    
+    # Render와 같은 플랫폼은 PORT 환경변수를 사용합니다.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
