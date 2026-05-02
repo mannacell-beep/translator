@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Sermon Live Subtitles</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    
+    <style>
+        :root {
+            --base-font-color: #ffffff; 
+            --ko-font-scale: 1.0; 
+            --en-font-scale: 1.0; 
+        }
+
+        body { 
+            background: linear-gradient(135deg, #141e30, #243b55);
+            color: #ffffff; 
+            font-family: 'Pretendard', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            height: 100vh; 
+            box-sizing: border-box; 
+        }
+        
+        #status { 
+            color: #b0c4de; 
+            margin-bottom: 15px; 
+            text-align: center; 
+            font-size: 1.1rem; 
+            font-weight: 300;
+        }
+
+        button#start-btn { 
+            padding: 12px 25px; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            border-radius: 30px; 
+            border: none; 
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            color: #333; 
+            font-weight: 800; 
+            margin-bottom: 25px; 
+            display: none; 
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 12px;
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 900px;
+            box-sizing: border-box;
+            justify-content: center;
+        }
+
+        select {
+            padding: 10px 15px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        
+        option { background-color: #243b55; color: white; }
+
+        #subtitle-container { 
+            width: 100%; max-width: 900px; flex-grow: 1; overflow-y: auto; 
+            display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; 
+        }
+
+        .subtitle-block { 
+            background: rgba(255, 255, 255, 0.07);
+            padding: 25px; 
+            border-radius: 20px; 
+        }
+        
+        .korean { 
+            margin-bottom: 12px; 
+            color: var(--base-font-color); 
+            font-size: calc(1.3rem * var(--ko-font-scale));
+            word-break: keep-all;
+        } 
+        
+        .english, .vietnamese, .indonesian, .zambian { 
+            font-weight: 700; 
+            color: var(--base-font-color); 
+            font-size: calc(2.2rem * var(--en-font-scale));
+        }
+
+        /* --- 요청하신 5개 언어 선택 로직 --- */
+        /* 기본적으로 모두 숨김 */
+        .korean, .english, .vietnamese, .indonesian, .zambian { display: none; }
+
+        /* 1. 한글만 */
+        body.lang-ko .korean { display: block; }
+
+        /* 2. 한글 + 영어 */
+        body.lang-ko-en .korean, body.lang-ko-en .english { display: block; }
+
+        /* 3. 한글 + 베트남어 */
+        body.lang-ko-vi .korean, body.lang-ko-vi .vietnamese { display: block; }
+
+        /* 4. 한글 + 인도네시아어 */
+        body.lang-ko-id .korean, body.lang-ko-id .indonesian { display: block; }
+
+        /* 5. 한글 + 잠비아어 */
+        body.lang-ko-ny .korean, body.lang-ko-ny .zambian { display: block; }
+    </style>
+</head>
+<body class="lang-ko"> <div id="controls">
+<select id="lang-select">
+            <option value="ko">🇰🇷 한글만</option>
+            <option value="ko-en">🌐 한글 + English</option>
+            <option value="ko-vi">🌐 한글 + Tiếng Việt</option>
+            <option value="ko-id">🌐 한글 + Bahasa Indonesia</option>
+            <option value="ko-ny">🌐 한글 + Chichewa</option>
+        </select>
+        <select id="color-select">
+            <option value="#ffffff">🤍 색상: 화이트</option>
+            <option value="#ffe66d">💛 색상: 파스텔 옐로우</option>
+            <option value="#4ecdc4">🩵 색상: 티파니 민트</option>
+        </select>
+        <select id="ko-size-select">
+            <option value="1.0">🇰🇷 한글: 보통</option>
+            <option value="1.2">🇰🇷 한글: 크게</option>
+            <option value="1.5">🇰🇷 한글: 아주 크게</option>
+        </select>
+        <select id="en-size-select">
+            <option value="1.0">🌐 번역: 보통</option>
+            <option value="1.2">🌐 번역: 크게</option>
+            <option value="1.5">🌐 번역: 아주 크게</option>
+        </select>
+    </div>
+
+    <div id="status">연결 준비 중...</div>
+    <button id="start-btn">설교 시작 (마이크 켜기)</button>
+    
+    <div id="subtitle-container"></div>
+
+    <script>
+        document.getElementById('lang-select').addEventListener('change', (e) => { document.body.className = 'lang-' + e.target.value; });
+        document.getElementById('color-select').addEventListener('change', (e) => { document.documentElement.style.setProperty('--base-font-color', e.target.value); });
+        document.getElementById('ko-size-select').addEventListener('change', (e) => { document.documentElement.style.setProperty('--ko-font-scale', e.target.value); });
+        document.getElementById('en-size-select').addEventListener('change', (e) => { document.documentElement.style.setProperty('--en-font-scale', e.target.value); });
+
+        const startBtn = document.getElementById('start-btn');
+        const statusDiv = document.getElementById('status');
+        const container = document.getElementById('subtitle-container');
+
+        function addSubtitle(koText, enText, viText, idText, nyText) {
+            const block = document.createElement('div');
+            block.className = 'subtitle-block';
+            
+            const koDiv = document.createElement('div'); koDiv.className = 'korean'; koDiv.innerText = koText || '';
+            const enDiv = document.createElement('div'); enDiv.className = 'english'; enDiv.innerText = enText || '';
+            const viDiv = document.createElement('div'); viDiv.className = 'vietnamese'; viDiv.innerText = viText || '';
+            const idDiv = document.createElement('div'); idDiv.className = 'indonesian'; idDiv.innerText = idText || '';
+            const nyDiv = document.createElement('div'); nyDiv.className = 'zambian'; nyDiv.innerText = nyText || '';
+            
+            block.appendChild(koDiv);
+            block.appendChild(enDiv);
+            block.appendChild(viDiv);
+            block.appendChild(idDiv);
+            block.appendChild(nyDiv);
+            
+            container.appendChild(block);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        const isPastor = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+
+        if (isPastor) {
+            startBtn.style.display = 'block';
+            statusDiv.innerText = "아래 버튼을 눌러 마이크를 켜주세요.";
+            
+            startBtn.onclick = async () => {
+                startBtn.style.display = 'none';
+                statusDiv.innerText = "🎤 마이크 작동 중... (성도들에게 방송 중)";
+                
+                try {
+                    const socket = new WebSocket('ws://' + location.host + '/listen');
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const audioContext = new AudioContext({ sampleRate: 16000 });
+                    const source = audioContext.createMediaStreamSource(stream);
+                    const processor = audioContext.createScriptProcessor(1024, 1, 1);
+                    
+                    source.connect(processor);
+                    processor.connect(audioContext.destination);
+                    
+                    processor.onaudioprocess = (e) => {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+                        }
+                        if (socket.readyState === WebSocket.OPEN) {
+                            socket.send(pcmData.buffer);
+                        }
+                    };
+                    
+                    socket.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        addSubtitle(data.ko, data.en, data.vi, data.id, data.ny); 
+                    };
+                } catch (error) {
+                    statusDiv.innerText = "마이크 연결을 허용해주세요!";
+                    startBtn.style.display = 'block';
+                }
+            };
+        } else {
+            statusDiv.innerText = "🙏 목사님의 설교를 기다리고 있습니다...";
+            const socket = new WebSocket('ws://' + location.host + '/view');
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addSubtitle(data.ko, data.en, data.vi, data.id, data.ny);
+            };
+        }
+    </script>
+</body>
+</html>
