@@ -4,3 +4,4 @@ websocket-client
 deep_translator
 python-dotenv
 gunicorn
+eventlet>=0.40.3
